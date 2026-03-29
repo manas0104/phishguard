@@ -1,5 +1,5 @@
-# PhishGuard
 
+# PhishGuard
 PhishGuard is a machine learning-based system for detecting phishing URLs, emails, and websites using hybrid rule-based and ML approaches.
 
 ## Features (Planned)
@@ -13,3 +13,4 @@ PhishGuard is a machine learning-based system for detecting phishing URLs, email
 1. CLI Tool
 2. Web Application
 3. Browser Extension
+=======
