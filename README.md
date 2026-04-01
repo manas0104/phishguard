@@ -64,18 +64,20 @@ PhishGuard/
 │   ├── preprocess.py
 │   ├── train_model.py
 │   ├── feature_extraction.py
-│   └── predict.py
+│   ├── predict.py
+│   └── test.py
 │
+├── .gitignore
 └── README.md
 
 ---
 
 ## ▶️ How to Run
 
-1. Train Model
+1. Train Model: 
 python3 src/train_model.py
 
-2. Predict URL
+2. Predict URL: 
 python3 src/predict.py
 
 ---
@@ -84,7 +86,7 @@ python3 src/predict.py
 
 Enter URL: http://google.com
 
-RESULT:
+RESULT: 
 Safe Website  
 Confidence: 86.00%
 
