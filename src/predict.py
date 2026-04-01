@@ -2,36 +2,33 @@ import joblib
 import pandas as pd
 from feature_extraction import extract_features
 
-# Load model
+# Load model + selected features
 model = joblib.load("models/phish_model.pkl")
+selected_features = joblib.load("models/features.pkl")
 
-print("🔐 PhishGuard is ready!")
+print("🔐 PhishGuard V2 is ready!")
 
 try:
-    # Take URL input
     url = input("Enter URL: ").strip()
 
     if not url:
         raise ValueError("URL cannot be empty")
 
     # Extract features
-    features = extract_features(url)
-
-    # Get feature names
-    feature_names = model.feature_names_in_
+    feature_dict = extract_features(url)
 
     # Convert to DataFrame
-    input_df = pd.DataFrame([features], columns=feature_names)
+    features_df = pd.DataFrame([feature_dict])
+
+    # Ensure correct order
+    features_df = features_df[selected_features]
 
     # Predict
-    prediction = model.predict(input_df)
-    probability = model.predict_proba(input_df)
+    prediction = model.predict(features_df)
+    confidence = model.predict_proba(features_df)[0].max() * 100
 
-    # Confidence
-    confidence = max(probability[0]) * 100
-
-    # Output
     print("\n🔍 RESULT:")
+
     if prediction[0] == 1:
         print("⚠️ Phishing Website Detected!")
     else:

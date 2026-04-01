@@ -3,90 +3,65 @@ from urllib.parse import urlparse
 
 
 def extract_features(url):
-    features = []
+    features = {}
 
-    url = url.lower()
     parsed = urlparse(url)
     domain = parsed.netloc
 
-    # 1. Having IP Address
-    features.append(-1 if re.search(r'\d+\.\d+\.\d+\.\d+', url) else 1)
+    # ----------------------------
+    # CORE FEATURES
+    # ----------------------------
 
-    # 2. URL Length
-    if len(url) < 54:
-        features.append(1)
-    elif 54 <= len(url) <= 75:
-        features.append(0)
-    else:
-        features.append(-1)
+    # IP address detection
+    features['having_IP'] = 1 if re.search(r'\d+\.\d+\.\d+\.\d+', domain) else 0
 
-    # 3. Shortening Service
-    shorteners = r"bit\.ly|goo\.gl|tinyurl|t\.co|is\.gd|buff\.ly"
-    features.append(-1 if re.search(shorteners, url) else 1)
+    # URL length
+    features['URLURL_Length'] = len(url)
 
-    # 4. @ symbol
-    features.append(-1 if "@" in url else 1)
+    # Shortening service
+    features['Shortining_Service'] = 1 if "bit.ly" in url else 0
 
-    # 5. Double slash redirect
-    features.append(-1 if "//" in url[7:] else 1)
+    # @ symbol
+    features['having_At_Symbol'] = 1 if "@" in url else 0
 
-    # 6. Prefix-Suffix (- in domain)
-    features.append(-1 if "-" in domain else 1)
+    # Double slash redirect
+    features['double_slash_redirecting'] = 1 if "//" in url[7:] else 0
 
-    # 7. Subdomain count
-    dots = domain.count(".")
-    if dots == 1:
-        features.append(1)
-    elif dots == 2:
-        features.append(0)
-    else:
-        features.append(-1)
+    # Prefix-Suffix (-)
+    features['Prefix_Suffix'] = 1 if "-" in domain else 0
 
-    # 8. HTTPS
-    features.append(1 if url.startswith("https") else -1)
+    # Subdomain count
+    features['having_Sub_Domain'] = 1 if domain.count('.') > 1 else 0
 
-    # 9. HTTPS token in domain
-    features.append(-1 if "https" in domain else 1)
+    # HTTPS
+    features['SSLfinal_State'] = 1 if url.startswith("https") else 0
 
-    # 10. Abnormal URL
-    features.append(-1 if domain not in url else 1)
+    # HTTPS token
+    features['HTTPS_token'] = 1 if "https" in domain else 0
 
-    # ---------------- NEW STRONG FEATURES ---------------- #
+    # Email submission
+    features['Submitting_to_email'] = 1 if "mailto" in url else 0
 
-    # 11. Suspicious keywords
-    keywords = ["login", "secure", "verify", "account", "update", "bank", "paypal"]
-    count = sum(1 for word in keywords if word in url)
+    # Abnormal URL
+    features['Abnormal_URL'] = 1 if "@" in url else 0
 
-    if count == 0:
-        features.append(1)
-    elif count == 1:
-        features.append(0)
-    else:
-        features.append(-1)
-
-    # 12. Brand impersonation
-    brands = ["paypal", "google", "facebook", "amazon", "bank"]
-    features.append(-1 if any(b in url for b in brands) else 1)
-
-    # 13. Too many digits in URL
-    digits = sum(c.isdigit() for c in url)
-    features.append(-1 if digits > 5 else 1)
-
-    # 14. URL has suspicious TLD
-    suspicious_tlds = [".tk", ".ml", ".ga", ".cf"]
-    features.append(-1 if any(tld in domain for tld in suspicious_tlds) else 1)
-
-    # 15. Length of domain
-    if len(domain) < 10:
-        features.append(1)
-    elif len(domain) <= 20:
-        features.append(0)
-    else:
-        features.append(-1)
-
-    # ----------------------------------------------------- #
-
-    # Ensure total features = 30
-    features += [0] * (30 - len(features))
-
+    # Redirect
+    features['Redirect'] = 1 if "//" in url[7:] else 0
+    
+    # ----------------------------
+    # DEFAULT EXTRA FEATURES
+    # ----------------------------
+    features['Google_Index'] = 0
+    features['Links_pointing_to_page'] = 0
+    features['Statistical_report'] = 0
+    features['URL_of_Anchor'] = 0
+    features['web_traffic'] = 0
+    features['Links_in_tags'] = 0
+    features['SFH'] = 0
+    features['Links_pointing_to_page'] = 0
+    features['Request_URL'] = 0
+    features['Domain_registeration_length'] = 0
+    features['age_of_domain'] = 0
+    features['Page_Rank'] = 0
+    features['DNSRecord'] = 0
     return features
