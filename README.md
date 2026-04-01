@@ -51,24 +51,24 @@ The project is built step by step in multiple versions to simulate real world ML
 ## Project Structure
 
 PhishGuard/
-│
-├── data/
-│   └── phishing.csv
-│
-├── models/
-│   ├── phish_model.pkl
-│   └── features.pkl
-│
-├── src/
-│   ├── load_data.py
-│   ├── preprocess.py
-│   ├── train_model.py
-│   ├── feature_extraction.py
-│   ├── predict.py
-│   └── test.py
-│
-├── .gitignore
-└── README.md
+   data/
+      phishing.csv
+      
+   models/
+      phish_model.pkl
+      features.pkl
+      
+   src/
+      load_data.py
+      preprocess.py
+      train_model.py
+      feature_extraction.py
+      predict.py
+      test.py
+
+   .gitignore
+   README.md
+   
 
 ---
 
