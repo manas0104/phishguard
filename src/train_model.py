@@ -1,3 +1,4 @@
+from src.realtime_features import extract_realtime_features
 import pandas as pd
 import joblib
 
@@ -5,20 +6,42 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 
-from preprocess import preprocess_data
+from src.preprocess import preprocess_data
 
 
 print("Loading dataset...")
 df = pd.read_csv("data/phishing.csv")
 
-# Preprocess
+# ----------------------------
+# CHECK URL COLUMN
+# ----------------------------
+if 'url' not in df.columns:
+    print("⚠️ WARNING: 'url' column not found. Skipping realtime features.")
+else:
+    print("Adding realtime features...")
+
+    realtime_data = df['url'].apply(extract_realtime_features)
+    realtime_df = pd.DataFrame(realtime_data.tolist())
+
+    df = pd.concat([df, realtime_df], axis=1)
+
+
+# ----------------------------
+# PREPROCESS
+# ----------------------------
 df = preprocess_data(df)
 
-# Features & Target
+
+# ----------------------------
+# FEATURES & TARGET
+# ----------------------------
 X = df.drop(['Result'], axis=1)
 y = df['Result']
 
-# Split
+
+# ----------------------------
+# TRAIN TEST SPLIT
+# ----------------------------
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
