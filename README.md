@@ -1,86 +1,93 @@
 
-# PhishGuard – Phishing Website Detection System
+# PhishGuard – Hybrid Phishing Detection System
 
-## Overview
-PhishGuard is a Machine Learning based system that detects whether a given URL is safe or phishing.
+PhishGuard is a hybrid machine learning-based phishing detection system that combines:
+	•	Static feature-based ML (V2)
+	•	Real-time domain intelligence (V3)
+	•	Rule-based heuristics
 
-The project is built step by step in multiple versions to simulate real world ML system development and improvement.
-
----
-
-## Version 2 Highlights
-- Feature importance-based selection (top features chosen automatically)
-- Improved preprocessing pipeline (cleaning, encoding, outlier handling)
-- Aligned training & prediction pipeline (no feature mismatch)
-- Stable and consistent predictions
-- Improved model performance (~94% accuracy)
+to detect phishing URLs with improved robustness and real-world applicability.
 
 ---
 
-## Workflow
-
-1. Load dataset  
-2. Perform preprocessing:
-   - Remove useless columns  
-   - Handle missing values  
-   - Remove duplicates  
-   - Encode categorical data  
-   - Handle outliers  
-3. Split features and target  
-4. Train Random Forest model  
-5. Extract feature importance  
-6. Select top features automatically  
-7. Retrain model using selected features  
-8. Save:
-   - Trained model (phish_model.pkl)
-   - Selected feature list (features.pkl)  
-9. Take URL input and predict in real-time  
-
+## Features
+	•	Detect phishing URLs in real-time
+	•	Dual-model architecture (V2 + V3)
+	•	WHOIS, DNS, IP-based feature extraction
+	•	Hybrid decision logic (ML + rules)
+	•	Confidence scoring
+	•	Debug insights for explainability
 ---
 
-## Tech Stack
+## System Architecture
 
-- Python
-- Pandas
-- NumPy
-- Scikit-learn
-- Joblib
+```txt
+                ┌──────────────┐
+URL ───────────▶│ V2 Features  │──▶ Model V2
+                │ (Static ML)  │
+                └──────────────┘
 
+                ┌──────────────┐
+URL ───────────▶│ V3 Features  │──▶ Model V3
+                │ (Realtime)   │
+                └──────────────┘
+
+                        ↓
+                Hybrid Decision Logic
+                        ↓
+                Rule-based Override
+                        ↓
+                  Final Prediction
+```
 ---
 
 ## Project Structure
-
 ```txt
 PhishGuard/
 │
 ├── data/
-│   └── phishing.csv
+│   ├── url_dataset.csv          # Final dataset (used for V3 training)
+│   ├── phishing_cleaned.csv     # Cleaned phishing data (reference)
+│   └── phishing.csv             # Raw dataset (V2)
 │
 ├── models/
-│   ├── phish_model.pkl
-│   └── features.pkl
+│   ├── phish_model.pkl          # V2 model
+│   ├── features.pkl             # V2 features
+│   ├── phish_model_v3.pkl       # V3 model (real-time)
+│   └── features_v3.pkl          # V3 features
 │
 ├── src/
-│   ├── load_data.py
-│   ├── preprocess.py
-│   ├── train_model.py
-│   ├── feature_extraction.py
-│   ├── predict.py
-│   └── test.py
+│   ├── __init__.py              # Makes src a package
+│   ├── predict.py               # Main prediction system (HYBRID)
+│   ├── train_model.py           # V2 model training
+│   ├── train_url_model.py       # V3 model training
+│   ├── realtime_features.py     # Real-time feature extraction
+│   ├── preprocess.py            # Data preprocessing
+│   │
+│   └── utils/                   # Helper modules
+│       ├── feature_extraction.py
+│       └── load_data.py
 │
-├── .gitignore
-└── README.md
+├── Requirements.txt             # Dependencies
+├── README.md                    # Project documentation
+└── .gitignore                   # Ignore unnecessary files
+```
+---
+
+## Installation
+```txt
+git clone https://github.com/manas0104/phishguard.git
+cd phishguard
+
+pip install -r requirements.txt
 ```
    
 ---
 
-## ▶️ How to Run
+## Usage
 
-1. Train Model: 
-python3 src/train_model.py
-
-2. Predict URL: 
-python3 src/predict.py
+Predict URL: 
+python3 -m src.predict
 
 ---
 
@@ -88,37 +95,70 @@ python3 src/predict.py
 
 Enter URL: http://google.com
 
-RESULT: 
-Safe Website  
-Confidence: 86.00%
+RESULT:
+Phishing Website
+Confidence: 79.21%
+
+--- Debug Info ---
+V2 Prediction: -1
+V3 Prediction: 1
+Suspicion Score: 1
+Final Score: 1.36
 
 ---
 
-## Model Performance
+## Models
 
-- Accuracy: ~94%
-- Balanced precision & recall
-- Reduced overfitting using feature selection
-- Stable predictions due to aligned feature pipeline
+V2 Model
+	•	Trained on structured phishing dataset
+	•	Uses engineered features (SSL, URL structure, etc.)
+	•	High accuracy (~94%)
+
+V3 Model
+	•	Trained on real-world URLs
+	•	Uses:
+	•	Domain age
+	•	DNS (MX record)
+	•	IP resolution
+	•	Captures real-time domain behavior
 
 ---
 
-## Limitations (Version 2)
+## Hybrid Logic
 
-- Uses dataset-based features (not real-time data)
-- Some features use default values during prediction
-- Does not yet fetch live domain information
+The final prediction is based on:
+	•	Model V2 output
+	•	Model V3 output
+	•	Heuristic scoring
+
+This improves:
+	•	🔥 Robustness
+	•	🔥 Real-world detection capability
+	•	🔥 Reduced false negatives
 
 ---
 
-## Future Improvements (Next Versions)
+## Dataset
 
-- Real-time feature extraction (WHOIS, DNS, IP lookup)
-- HTML & content-based analysis
-- Deep Learning models
-- API-based phishing detection
-- Web interface (Flask / Streamlit)
-- Visualization dashboard
+	•	Phishing URLs: PhishTank
+	•	Safe URLs: curated trusted domains
+	•	Balanced dataset (250 safe + 250 phishing)
+   
+---
+
+## Key Learnings
+	•	Handling unreliable real-world data (DNS/WHOIS failures)
+	•	Building hybrid ML systems
+	•	Combining static + dynamic features
+	•	Designing scalable ML pipelines
+
+---
+
+## Future Improvements
+	•	🌐 Web interface (Streamlit / Flask)
+	•	📧 Email phishing detection
+	•	🧾 Website content analysis (HTML/JS)
+	•	🧩 Browser extension integration
 
 ---
 
