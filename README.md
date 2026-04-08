@@ -92,7 +92,7 @@ python3 -m src.predict
 ---
 
 ## Example
-
+```txt
 Enter URL: http://google.com
 
 RESULT:
@@ -104,7 +104,7 @@ V2 Prediction: -1
 V3 Prediction: 1
 Suspicion Score: 1
 Final Score: 1.36
-
+```
 ---
 
 ## Models
