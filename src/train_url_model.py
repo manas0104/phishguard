@@ -14,11 +14,11 @@ df = pd.read_csv("data/url_dataset.csv")
 
 
 # ----------------------------
-# FEATURE EXTRACTION (OPTIMIZED)
+# FEATURE EXTRACTION 
 # ----------------------------
 print("Extracting features...")
 
-feature_cache = {}   # 🔥 cache to avoid repeated calls
+feature_cache = {}   # cache to avoid repeated calls
 features = []
 
 for i, url in enumerate(df['url']):

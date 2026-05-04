@@ -1,3 +1,18 @@
+# macOS
+.DS_Store
+
+# Python
 __pycache__/
 *.pyc
-.DS_Store
+*.pyo
+
+# Environment
+.env
+venv/
+.env/
+
+# Jupyter (if ever used)
+.ipynb_checkpoints/
+
+# Test files
+test.py
