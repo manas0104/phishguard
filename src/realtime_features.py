@@ -5,9 +5,13 @@ from urllib.parse import urlparse
 from datetime import datetime
 import warnings
 import logging
-import warnings
 import sys
 import os
+
+
+# ----------------------------
+# SUPPRESS WARNINGS / LOGS
+# ----------------------------
 
 # Suppress low-level socket errors
 sys.stderr = open(os.devnull, 'w')
@@ -15,9 +19,10 @@ sys.stderr = open(os.devnull, 'w')
 # Suppress warnings
 warnings.filterwarnings("ignore")
 
-# Suppress DNS + socket logs
+# Suppress DNS + WHOIS logs
 logging.getLogger("dns").setLevel(logging.CRITICAL)
 logging.getLogger("whois").setLevel(logging.CRITICAL)
+
 
 # ----------------------------
 # SAFE CALL WRAPPER
@@ -30,13 +35,34 @@ def safe_call(func, *args):
 
 
 # ----------------------------
+# LOAD BRAND LIST
+# ----------------------------
+def load_brands():
+    try:
+        with open("data/brands.txt", "r") as f:
+            return [line.strip().lower() for line in f if line.strip()]
+    except:
+        return []
+
+
+# ----------------------------
+# LOAD SUSPICIOUS WORDS
+# ----------------------------
+def load_suspicious_words():
+    try:
+        with open("data/suspicious_words.txt", "r") as f:
+            return [line.strip().lower() for line in f if line.strip()]
+    except:
+        return []
+
+
+# ----------------------------
 # GET DOMAIN FROM URL
 # ----------------------------
-
 def get_domain(url):
     try:
         if not url.startswith("http"):
-            url = "http://" + url  # ✅ fix for raw domains
+            url = "http://" + url
 
         parsed = urlparse(url)
         domain = parsed.netloc
@@ -63,6 +89,7 @@ def get_domain_age(domain):
             return -1
 
         age = (datetime.now() - creation_date).days // 365
+
         return age
 
     except:
@@ -76,6 +103,7 @@ def has_mx_record(domain):
     try:
         answers = dns.resolver.resolve(domain, 'MX')
         return 1 if answers else 0
+
     except:
         return 0
 
@@ -86,6 +114,7 @@ def has_mx_record(domain):
 def get_ip(domain):
     try:
         return socket.gethostbyname(domain)
+
     except:
         return None
 
@@ -94,8 +123,34 @@ def get_ip(domain):
 # MAIN FEATURE EXTRACTOR
 # ----------------------------
 def extract_realtime_features(url):
+
     features = {}
 
+    # ----------------------------
+    # LOAD INTELLIGENCE DATA
+    # ----------------------------
+    brands = load_brands()
+
+    suspicious_words = load_suspicious_words()
+
+    # ----------------------------
+    # BRAND DETECTION
+    # ----------------------------
+    features["has_brand_name"] = 1 if any(
+        brand in url.lower() for brand in brands
+    ) else 0
+
+    # ----------------------------
+    # SUSPICIOUS WORD COUNT
+    # ----------------------------
+    suspicious_word_count = sum(
+        1 for word in suspicious_words
+        if word in url.lower()
+    )
+
+    # ----------------------------
+    # GET DOMAIN
+    # ----------------------------
     domain = safe_call(get_domain, url)
 
     # ----------------------------
@@ -110,29 +165,39 @@ def extract_realtime_features(url):
             "url_length": len(url),
             "num_dots": url.count('.'),
             "has_dash": 1 if "-" in url else 0,
-            "has_suspicious_word": 0
+            "suspicious_word_count": suspicious_word_count,
+            "has_brand_name": features["has_brand_name"]
         }
 
     # ----------------------------
     # NETWORK FEATURES
     # ----------------------------
     age = safe_call(get_domain_age, domain)
+
     mx = safe_call(has_mx_record, domain)
+
     ip = safe_call(get_ip, domain)
 
     features["domain_age"] = age if age is not None else -1
+
     features["has_mx"] = 1 if mx else 0
+
     features["has_ip"] = 1 if ip else 0
+
     features["has_https"] = 1 if url.startswith("https") else 0
 
     # ----------------------------
-    # 🔥 NEW URL-SEMANTIC FEATURES
+    # URL STRUCTURE FEATURES
     # ----------------------------
     features["url_length"] = len(url)
+
     features["num_dots"] = url.count('.')
+
     features["has_dash"] = 1 if "-" in url else 0
 
-    suspicious_words = ["login", "secure", "verify", "account", "update", "bank", "paypal"]
-    features["has_suspicious_word"] = 1 if any(word in url.lower() for word in suspicious_words) else 0
+    # ----------------------------
+    # PHISHING LANGUAGE FEATURES
+    # ----------------------------
+    features["suspicious_word_count"] = suspicious_word_count
 
     return features
