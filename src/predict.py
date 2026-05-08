@@ -18,8 +18,18 @@ features_v3 = joblib.load("models/features_v3.pkl")
 # ----------------------------
 # INPUT
 # ----------------------------
-url = input("Enter URL: ")
+url = input("Enter URL: ").strip()
 
+# ----------------------------
+# INPUT VALIDATION
+# ----------------------------
+if not url:
+    print("\n❌ Error: URL cannot be empty.")
+    exit()
+
+if "." not in url:
+    print("\n❌ Error: Invalid URL format.")
+    exit()
 
 # ----------------------------
 # V2 FEATURES (STATIC)

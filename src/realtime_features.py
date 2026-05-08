@@ -7,6 +7,7 @@ import warnings
 import logging
 import sys
 import os
+import json
 
 
 # ----------------------------
@@ -46,14 +47,14 @@ def load_brands():
 
 
 # ----------------------------
-# LOAD SUSPICIOUS WORDS
+# LOAD THREAT KEYWORDS
 # ----------------------------
-def load_suspicious_words():
+def load_threat_keywords():
     try:
-        with open("data/suspicious_words.txt", "r") as f:
-            return [line.strip().lower() for line in f if line.strip()]
+        with open("data/threat_keywords.json", "r") as f:
+            return json.load(f)
     except:
-        return []
+        return {}
 
 
 # ----------------------------
@@ -131,7 +132,7 @@ def extract_realtime_features(url):
     # ----------------------------
     brands = load_brands()
 
-    suspicious_words = load_suspicious_words()
+    threat_keywords = load_threat_keywords()
 
     # ----------------------------
     # BRAND DETECTION
@@ -141,12 +142,14 @@ def extract_realtime_features(url):
     ) else 0
 
     # ----------------------------
-    # SUSPICIOUS WORD COUNT
+    # THREAT SCORE
     # ----------------------------
-    suspicious_word_count = sum(
-        1 for word in suspicious_words
-        if word in url.lower()
-    )
+    threat_score = 0
+
+    for keyword, weight in threat_keywords.items():
+
+        if keyword in url.lower():
+            threat_score += weight
 
     # ----------------------------
     # GET DOMAIN
@@ -165,7 +168,7 @@ def extract_realtime_features(url):
             "url_length": len(url),
             "num_dots": url.count('.'),
             "has_dash": 1 if "-" in url else 0,
-            "suspicious_word_count": suspicious_word_count,
+            "threat_score": threat_score,
             "has_brand_name": features["has_brand_name"]
         }
 
@@ -196,8 +199,8 @@ def extract_realtime_features(url):
     features["has_dash"] = 1 if "-" in url else 0
 
     # ----------------------------
-    # PHISHING LANGUAGE FEATURES
+    # SEMANTIC THREAT FEATURE
     # ----------------------------
-    features["suspicious_word_count"] = suspicious_word_count
+    features["threat_score"] = threat_score
 
     return features
