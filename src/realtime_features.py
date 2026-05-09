@@ -3,6 +3,7 @@ import whois
 import dns.resolver
 from urllib.parse import urlparse
 from datetime import datetime
+from difflib import SequenceMatcher
 import warnings
 import logging
 import sys
@@ -56,6 +57,36 @@ def load_threat_keywords():
     except:
         return {}
 
+# ----------------------------
+# LOAD CHARACTER REPLACEMENTS
+# ----------------------------
+def load_character_replacements():
+    try:
+        with open("data/character_replacements.json", "r") as f:
+            return json.load(f)
+    except:
+        return {}
+    
+# ----------------------------
+# NORMALIZE TEXT
+# ----------------------------
+def normalize_text(text):
+
+    replacements = load_character_replacements()
+
+    text = text.lower()
+
+    for fake, real in replacements.items():
+        text = text.replace(fake, real)
+
+    return text
+
+# ----------------------------
+# CALCULATE TEXT SIMILARITY
+# ----------------------------
+def similarity(a, b):
+
+    return SequenceMatcher(None, a, b).ratio()
 
 # ----------------------------
 # GET DOMAIN FROM URL
@@ -126,6 +157,7 @@ def get_ip(domain):
 def extract_realtime_features(url):
 
     features = {}
+    normalized_url = normalize_text(url)
 
     # ----------------------------
     # LOAD INTELLIGENCE DATA
@@ -138,8 +170,20 @@ def extract_realtime_features(url):
     # BRAND DETECTION
     # ----------------------------
     features["has_brand_name"] = 1 if any(
-        brand in url.lower() for brand in brands
+        brand in normalized_url for brand in brands
     ) else 0
+
+    # ----------------------------
+    # TYPO SQUATTING SCORE
+    # ----------------------------
+    typo_score = 0
+
+    for brand in brands:
+
+        score = similarity(brand, normalized_url)
+
+        if score > 0.7 and brand not in normalized_url:
+            typo_score += 1
 
     # ----------------------------
     # THREAT SCORE
@@ -169,6 +213,7 @@ def extract_realtime_features(url):
             "num_dots": url.count('.'),
             "has_dash": 1 if "-" in url else 0,
             "threat_score": threat_score,
+            "typo_score": typo_score,
             "has_brand_name": features["has_brand_name"]
         }
 
@@ -202,5 +247,10 @@ def extract_realtime_features(url):
     # SEMANTIC THREAT FEATURE
     # ----------------------------
     features["threat_score"] = threat_score
+
+    # ----------------------------
+    # TYPO SQUATTING FEATURE
+    # ----------------------------
+    features["typo_score"] = typo_score
 
     return features
