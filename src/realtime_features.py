@@ -1,5 +1,7 @@
 import socket
 import whois
+import math
+from collections import Counter
 import dns.resolver
 from urllib.parse import urlparse
 from datetime import datetime
@@ -57,6 +59,7 @@ def load_threat_keywords():
     except:
         return {}
 
+
 # ----------------------------
 # LOAD CHARACTER REPLACEMENTS
 # ----------------------------
@@ -66,7 +69,8 @@ def load_character_replacements():
             return json.load(f)
     except:
         return {}
-    
+
+
 # ----------------------------
 # NORMALIZE TEXT
 # ----------------------------
@@ -81,12 +85,34 @@ def normalize_text(text):
 
     return text
 
+
 # ----------------------------
 # CALCULATE TEXT SIMILARITY
 # ----------------------------
 def similarity(a, b):
 
     return SequenceMatcher(None, a, b).ratio()
+
+
+# ----------------------------
+# CALCULATE SHANNON ENTROPY
+# ----------------------------
+def calculate_entropy(text):
+
+    counter = Counter(text)
+
+    length = len(text)
+
+    entropy = 0
+
+    for count in counter.values():
+
+        probability = count / length
+
+        entropy -= probability * math.log2(probability)
+
+    return entropy
+
 
 # ----------------------------
 # GET DOMAIN FROM URL
@@ -157,7 +183,15 @@ def get_ip(domain):
 def extract_realtime_features(url):
 
     features = {}
+
     normalized_url = normalize_text(url)
+
+
+    # ----------------------------
+    # TOKENIZED URL
+    #----------------------------
+    tokens = normalized_url.replace(".", "-").split("-")
+
 
     # ----------------------------
     # LOAD INTELLIGENCE DATA
@@ -166,6 +200,7 @@ def extract_realtime_features(url):
 
     threat_keywords = load_threat_keywords()
 
+
     # ----------------------------
     # BRAND DETECTION
     # ----------------------------
@@ -173,17 +208,32 @@ def extract_realtime_features(url):
         brand in normalized_url for brand in brands
     ) else 0
 
+
     # ----------------------------
     # TYPO SQUATTING SCORE
     # ----------------------------
     typo_score = 0
 
+    raw_domain = get_domain(url) or url
+
+    normalized_domain = (
+        get_domain(normalized_url)
+        or normalized_url
+    )
+
     for brand in brands:
 
-        score = similarity(brand, normalized_url)
+        similarity_score = similarity(
+            brand,
+            normalized_domain
+        )
 
-        if score > 0.7 and brand not in normalized_url:
-            typo_score += 1
+        if similarity_score > 0.7:
+
+            # Detect spoofed variation
+            if brand not in raw_domain.lower():
+                typo_score += 1
+
 
     # ----------------------------
     # THREAT SCORE
@@ -195,10 +245,20 @@ def extract_realtime_features(url):
         if keyword in url.lower():
             threat_score += weight
 
+
+    digit_count = sum(c.isdigit() for c in normalized_url)
+
+    special_chars = sum(
+        not c.isalnum()
+        for c in normalized_url
+    )
+
+
     # ----------------------------
     # GET DOMAIN
     # ----------------------------
     domain = safe_call(get_domain, url)
+
 
     # ----------------------------
     # BASIC FALLBACK
@@ -212,10 +272,24 @@ def extract_realtime_features(url):
             "url_length": len(url),
             "num_dots": url.count('.'),
             "has_dash": 1 if "-" in url else 0,
+
             "threat_score": threat_score,
             "typo_score": typo_score,
-            "has_brand_name": features["has_brand_name"]
+            "has_brand_name": features["has_brand_name"],
+
+            "url_entropy": calculate_entropy(normalized_url),
+
+            "token_count": len(tokens),
+
+            "digit_ratio": (
+                digit_count / max(len(normalized_url), 1)
+            ),
+
+            "special_char_ratio": (
+                special_chars / max(len(normalized_url), 1)
+            )
         }
+
 
     # ----------------------------
     # NETWORK FEATURES
@@ -234,6 +308,7 @@ def extract_realtime_features(url):
 
     features["has_https"] = 1 if url.startswith("https") else 0
 
+
     # ----------------------------
     # URL STRUCTURE FEATURES
     # ----------------------------
@@ -243,10 +318,39 @@ def extract_realtime_features(url):
 
     features["has_dash"] = 1 if "-" in url else 0
 
+
+    # ----------------------------
+    # URL ENTROPY
+    # ----------------------------
+    features["url_entropy"] = calculate_entropy(normalized_url)
+
+
+    # ----------------------------
+    # TOKEN COUNT
+    # ----------------------------
+    features["token_count"] = len(tokens)
+
+
+    # ----------------------------
+    # DIGIT RATIO
+    # ----------------------------
+    features["digit_ratio"] = (
+        digit_count / max(len(normalized_url), 1)
+    )
+
+    # ----------------------------
+    # SPECIAL CHARACTER RATIO
+    # ----------------------------
+    features["special_char_ratio"] = (
+        special_chars / max(len(normalized_url), 1)
+    )
+
+
     # ----------------------------
     # SEMANTIC THREAT FEATURE
     # ----------------------------
     features["threat_score"] = threat_score
+
 
     # ----------------------------
     # TYPO SQUATTING FEATURE
