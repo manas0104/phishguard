@@ -56,6 +56,62 @@ final_score = (0.7 * v2_prob) + (0.3 * v3_prob)
 
 
 # ----------------------------
+# HYBRID INTELLIGENCE BOOSTING
+# ----------------------------
+
+# Strong suspicious subdomains
+if realtime_features.get(
+    "subdomain_risk_score", 0
+) >= 8:
+
+    final_score += 0.20
+
+
+# Suspicious TLD abuse
+if realtime_features.get(
+    "tld_risk_score", 0
+) >= 5:
+
+    final_score += 0.10
+
+
+# Dangerous phishing paths
+if realtime_features.get(
+    "path_risk_score", 0
+) >= 8:
+
+    final_score += 0.10
+
+
+# Suspicious query abuse
+if realtime_features.get(
+    "query_risk_score", 0
+) >= 8:
+
+    final_score += 0.10
+
+
+# Encoded phishing URLs
+if realtime_features.get(
+    "encoded_url_score", 0
+) >= 5:
+
+    final_score += 0.10
+
+
+# Heavy typo squatting
+if realtime_features.get(
+    "typo_score", 0
+) >= 1:
+
+    final_score += 0.15
+
+
+# Cap score safely
+final_score = min(final_score, 1.0)
+
+
+# ----------------------------
 # FINAL DECISION
 # ----------------------------
 THRESHOLD = 0.5

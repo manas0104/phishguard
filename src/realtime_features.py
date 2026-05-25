@@ -61,6 +61,60 @@ def load_threat_keywords():
 
 
 # ----------------------------
+# LOAD SUSPICIOUS TLDS
+# ----------------------------
+def load_suspicious_tlds():
+    try:
+        with open("data/suspicious_tlds.json", "r") as f:
+            return json.load(f)
+    except:
+        return {}
+    
+
+# ----------------------------
+# LOAD SUSPICIOUS ENCODINGS
+# ----------------------------
+def load_suspicious_encodings():
+    try:
+        with open("data/suspicious_encodings.json", "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+
+# ----------------------------
+# LOAD SUSPICIOUS SUBDOMAINS
+# ----------------------------
+def load_suspicious_subdomains():
+    try:
+        with open("data/suspicious_subdomains.json", "r") as f:
+            return json.load(f)
+    except:
+        return {}
+    
+
+# ----------------------------
+# LOAD SUSPICIOUS PATHS
+# ----------------------------
+def load_suspicious_paths():
+    try:
+        with open("data/suspicious_paths.json", "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+# ----------------------------
+# LOAD SUSPICIOUS QUERIES
+# ----------------------------
+def load_suspicious_queries():
+    try:
+        with open("data/suspicious_queries.json", "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+
+# ----------------------------
 # LOAD CHARACTER REPLACEMENTS
 # ----------------------------
 def load_character_replacements():
@@ -99,6 +153,9 @@ def similarity(a, b):
 # ----------------------------
 def calculate_entropy(text):
 
+    if not text:
+        return 0
+
     counter = Counter(text)
 
     length = len(text)
@@ -112,7 +169,6 @@ def calculate_entropy(text):
         entropy -= probability * math.log2(probability)
 
     return entropy
-
 
 # ----------------------------
 # GET DOMAIN FROM URL
@@ -182,6 +238,9 @@ def get_ip(domain):
 # ----------------------------
 def extract_realtime_features(url):
 
+    if not url:
+        url = ""
+
     features = {}
 
     normalized_url = normalize_text(url)
@@ -190,7 +249,13 @@ def extract_realtime_features(url):
     # ----------------------------
     # TOKENIZED URL
     #----------------------------
-    tokens = normalized_url.replace(".", "-").split("-")
+    tokens = [
+        token
+        for token in normalized_url
+            .replace(".", "-")
+            .split("-")
+        if token
+    ]
 
 
     # ----------------------------
@@ -200,6 +265,15 @@ def extract_realtime_features(url):
 
     threat_keywords = load_threat_keywords()
 
+    suspicious_tlds = load_suspicious_tlds()
+
+    suspicious_encodings = load_suspicious_encodings()
+
+    suspicious_subdomains = load_suspicious_subdomains()
+
+    suspicious_paths = load_suspicious_paths()
+
+    suspicious_queries = load_suspicious_queries()
 
     # ----------------------------
     # BRAND DETECTION
@@ -255,9 +329,112 @@ def extract_realtime_features(url):
 
 
     # ----------------------------
+    # ENCODED URL SCORE
+    # ----------------------------
+    encoded_url_score = 0
+
+    for encoding, weight in suspicious_encodings.items():
+
+        if encoding.lower() in url.lower():
+            encoded_url_score += weight
+
+
+    # ----------------------------
     # GET DOMAIN
     # ----------------------------
     domain = safe_call(get_domain, url)
+
+    parsed_url = urlparse(url)
+
+    path = parsed_url.path.lower()
+
+    query = parsed_url.query.lower()
+
+
+    # ----------------------------
+    # EXTRACT TLD
+    # ----------------------------
+    tld = ""
+
+    if domain and "." in domain:
+        tld = "." + domain.split(".")[-1]
+    
+
+    # ----------------------------
+    # SUBDOMAIN DEPTH
+    # ----------------------------
+    subdomain_depth = 0
+
+    if domain:
+        subdomain_depth = max(domain.count(".") - 1, 0)
+
+
+    # ----------------------------
+    # SUBDOMAIN RISK SCORE
+    # ----------------------------
+    subdomain_risk_score = 0
+
+    subdomain_parts = domain.split(".") if domain else []
+
+    for part in subdomain_parts:
+
+        part = part.lower()
+
+        if part in suspicious_subdomains:
+            subdomain_risk_score += (
+                suspicious_subdomains[part]
+            )
+
+    # Extra risk for excessive depth
+    if subdomain_depth >= 3:
+        subdomain_risk_score += subdomain_depth
+
+
+    # ----------------------------
+    # TLD RISK SCORE
+    # ----------------------------
+    tld_risk_score = suspicious_tlds.get(tld, 0)
+
+
+    # ----------------------------
+    # PATH DEPTH
+    # ----------------------------
+    path_depth = path.count("/")
+
+
+    # ----------------------------
+    # PATH RISK SCORE
+    # ----------------------------
+    path_risk_score = 0
+
+    path_parts = path.split("/")
+
+    for part in path_parts:
+
+        part = part.strip().lower()
+
+        if part in suspicious_paths:
+            path_risk_score += suspicious_paths[part]
+
+
+    # ----------------------------
+    # QUERY PARAM COUNT
+    # ----------------------------
+    query_param_count = 0
+
+    if query:
+        query_param_count = query.count("&") + 1
+
+
+    # ----------------------------
+    # QUERY RISK SCORE
+    # ----------------------------
+    query_risk_score = 0
+
+    for keyword, weight in suspicious_queries.items():
+
+        if keyword in query:
+            query_risk_score += weight
 
 
     # ----------------------------
@@ -270,16 +447,24 @@ def extract_realtime_features(url):
             "has_ip": 0,
             "has_https": 1,
             "url_length": len(url),
+            "tld_risk_score": tld_risk_score,
             "num_dots": url.count('.'),
             "has_dash": 1 if "-" in url else 0,
-
+            "encoded_url_score": encoded_url_score,
             "threat_score": threat_score,
             "typo_score": typo_score,
             "has_brand_name": features["has_brand_name"],
-
+            "subdomain_depth": subdomain_depth,
+            "subdomain_risk_score": subdomain_risk_score,
             "url_entropy": calculate_entropy(normalized_url),
 
             "token_count": len(tokens),
+
+            "path_depth": path_depth,
+            "path_risk_score": path_risk_score,
+
+            "query_param_count": query_param_count,
+            "query_risk_score": query_risk_score,
 
             "digit_ratio": (
                 digit_count / max(len(normalized_url), 1)
@@ -356,5 +541,46 @@ def extract_realtime_features(url):
     # TYPO SQUATTING FEATURE
     # ----------------------------
     features["typo_score"] = typo_score
+
+
+    # ----------------------------
+    # TLD RISK FEATURE
+    # ----------------------------
+    features["tld_risk_score"] = tld_risk_score
+
+
+    # ----------------------------
+    # ENCODED URL FEATURE
+    # ----------------------------
+    features["encoded_url_score"] = encoded_url_score
+
+
+    # ----------------------------
+    # SUBDOMAIN FEATURES
+    # ----------------------------
+    features["subdomain_depth"] = subdomain_depth
+
+    features["subdomain_risk_score"] = (
+        subdomain_risk_score
+    )
+
+
+    # ----------------------------
+    # PATH FEATURES
+    # ----------------------------
+    features["path_depth"] = path_depth
+
+    features["path_risk_score"] = path_risk_score
+
+    # ----------------------------
+    # QUERY FEATURES
+    # ----------------------------
+    features["query_param_count"] = (
+        query_param_count
+    )
+
+    features["query_risk_score"] = (
+        query_risk_score
+    )
 
     return features
